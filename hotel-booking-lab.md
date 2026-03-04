@@ -1444,32 +1444,53 @@ hotel-booking-system/
 
 **คำถามที่ 1:** `axios` คืออะไร และต่างจาก `fetch` ของ JavaScript อย่างไร?
 
-```
-เขียนคำตอบที่นี่
-```
+> ---
+>### คำตอบ:
+>**Axios** คือ Library สำหรับการทำ HTTP Request ที่ทำงานบนพื้นฐานของ **Promises** สามารถใช้งานได้ทั้งใน Browser และ Node.js (Isomorphic) ขณะที่ **Fetch** เป็น Built-in API ที่มีมาให้ใน Modern Browser อยู่แล้ว
+>**ข้อแตกต่างที่สำคัญ:**
+>1. **Automatic JSON Transformation:** Axios จะแปลงข้อมูล JSON ให้โดยอัตโนมัติ (Automatic parse) ขณะที่ Fetch ต้องใช้เมธอด `.json()` เพิ่มอีกขั้นตอนหนึ่ง
+>2. **Error Handling:** Axios จะ "Reject" Promise ทันทีเมื่อเจอ HTTP Error (เช่น 4xx หรือ 5xx) ทำให้เราดักใน `catch` ได้เลย แต่ Fetch จะ "Resolve" ตราบใดที่เชื่อมต่อ Server ติด (ต้องเช็ค `res.ok` เอง)
+>3. **Interceptors:** Axios มีฟีเจอร์เด่นคือการ "ดักจับ" (Interceptors) เพื่อแก้ไข Request หรือ Response ก่อนจะถูกประมวลผล (เช่น การใส่ Auth Token) ซึ่ง Fetch ไม่มีมาให้ในตัว
+>4. **Backward Compatibility:** Axios รองรับเบราว์เซอร์รุ่นเก่าได้ดีกว่า (Legacy support) ขณะที่ Fetch ต้องใช้ Polyfill ในบางกรณี
+> ---
 
 **คำถามที่ 2:** เหตุใด `ProtectedRoute` จึงต้องตรวจสอบ `loading` state ก่อน ถ้าไม่ตรวจสอบจะเกิดอะไรขึ้น?
 
-```
-เขียนคำตอบที่นี่
-```
+> ---
+>### คำตอบ:
+>การตรวจสอบ **loading state** ใน `ProtectedRoute` มีความสำคัญอย่างยิ่งในด้าน User Experience และความถูกต้องของ Logic การเข้าถึงข้อมูล
+>**เหตุผลที่ต้องตรวจสอบ:**
+>1. **Asynchronous Auth Check:** กระบวนการตรวจสอบสิทธิ์ (เช่น การเช็ค Firebase Auth หรือการยิง API ไปตรวจ Token) เป็นงานแบบ Asynchronous (ไม่ประสานเวลา) ซึ่งต้องใช้เวลาครู่หนึ่ง
+>2. **Prevention of "Flash" Login Screen:** หากไม่เช็ค `loading` ระบบจะประมวลผล Render ทันที ในขณะที่สถานะ `isAuthenticated` ยังคงเป็น `false` (ค่า Default) ส่งผลให้หน้าจอจะ "วูบ" ไปที่หน้า Login ก่อนจะเด้งกลับมาหน้า Private เมื่อโหลดเสร็จ
+>3. **ป้องกัน Race Condition:** ช่วยให้มั่นใจว่า App จะไม่ทำการ Redirect ผู้ใช้ไปผิดหน้าเพียงเพราะข้อมูล User ยังมาไม่ถึง
+>**ถ้าไม่ตรวจสอบจะเกิดอะไรขึ้น:**
+>ผู้ใช้ที่ล็อกอินอยู่แล้วจะถูกดีดกลับไปหน้า Login หรือโดน Access Denied ในเสี้ยววินาทีแรกที่โหลดหน้าเว็บ สร้างความสับสนและทำให้ระบบดูไม่เป็นมืออาชีพ (Unprofessional look)
+> ---
 
 **คำถามที่ 3:** `localStorage` ที่ใช้เก็บ JWT token มีความเสี่ยงด้านความปลอดภัยอย่างไร และมีวิธีอื่นที่ดีกว่าหรือไม่?
 
-```
-เขียนคำตอบที่นี่
-```
-
+> ---
+>### คำตอบ:
+>การเก็บ JWT ไว้ใน `localStorage` เป็นวิธีที่สะดวกแต่มีช่องโหว่ร้ายแรงที่เรียกว่า **XSS (Cross-Site Scripting)**
+>**ความเสี่ยงด้านความปลอดภัย:**
+>* **XSS Attack:** เนื่องจาก JavaScript สามารถเข้าถึง `localStorage` ได้ทั้งหมด หาก Hacker สามารถฝัง Script (Malicious Script) ลงในเว็บคุณได้ เขาสามารถรันคำสั่ง `localStorage.getItem('token')` และส่ง Token ของคุณไปที่ Server ของเขาได้ทันที ทำให้เขาสวมรอยเป็นคุณได้สมบูรณ์แบบ
+>**วิธีอื่นที่ดีกว่า:**
+>1. **HttpOnly Cookie:** เป็นวิธีที่แนะนำที่สุด โดยการตั้งค่า Cookie ให้เป็น `HttpOnly; Secure; SameSite=Strict` 
+    * **HttpOnly:** ทำให้ JavaScript ไม่สามารถอ่าน Cookie นี้ได้ (ป้องกัน XSS)
+    * **Secure:** ส่งผ่าน HTTPS เท่านั้น
+    * **SameSite:** ป้องกันการโจมตีประเภท CSRF (Cross-Site Request Forgery)
+>2. **Memory Storage:** เก็บ Token ไว้ในตัวแปรธรรมดาภายในแอป (State) ซึ่งจะหายไปเมื่อรีเฟรชหน้าจอ (ปลอดภัยสุดแต่ UX ลำบาก ต้องคอยทำ Silent Refresh ผ่าน Refresh Token ใน HttpOnly Cookie อีกที)
+> ---
 
 
 ---
 
 ## สิ่งที่ต้องส่ง
 
-- [ ] รูปผลการทดลองตามที่กำหนดในแต่ละขั้นตอน (แทรกในไฟล์นี้)
-- [ ] โค้ดที่แก้ไข: `server.js` (DELETE endpoint + GET `/api/users`)
-- [ ] ผลการทดสอบ Login / Logout บน Frontend พร้อมรูปภาพ
-- [ ] คำตอบคำถามท้ายใบงาน ครบทั้ง 3 ข้อ
+- [x] รูปผลการทดลองตามที่กำหนดในแต่ละขั้นตอน (แทรกในไฟล์นี้)
+- [x] โค้ดที่แก้ไข: `server.js` (DELETE endpoint + GET `/api/users`)
+- [x] ผลการทดสอบ Login / Logout บน Frontend พร้อมรูปภาพ
+- [x] คำตอบคำถามท้ายใบงาน ครบทั้ง 3 ข้อ
 
 ---
 
